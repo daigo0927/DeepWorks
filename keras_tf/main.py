@@ -4,6 +4,8 @@ import numpy as np
 import tensorflow as tf
 sess = tf.Session()
 
+import argparse
+
 from keras import backend as K
 K.set_session(sess)
 from keras.models import Model
@@ -50,6 +52,7 @@ def main():
     model = build_simpleCNN()
     labels_ = model(images)
     loss = tf.reduce_mean(categorical_crossentropy(labels, labels_))
+    accuracy = tf.reduce_mean(tf.reduce_sum(labels*labels_, axis = 1))
     
     opt = tf.train.AdamOptimizer().minimize(loss, var_list = model.trainable_weights)
     
@@ -62,7 +65,7 @@ def main():
     data_size = x_train.shape[0]
     batch_size = 128
     num_batches = int(data_size/batch_size)
-    num_epochs = 5
+    num_epochs = 20
 
     sess.run(tf.global_variables_initializer())
 
@@ -79,26 +82,52 @@ def main():
                                        K.learning_phase(): 1})
 
             if b%100 == 0:
-                l = sess.run(loss, feed_dict = {images:x_batch, labels:y_batch,
-                                                K.learning_phase(): 1})
-                print('training loss epoch : {}, batch : {}, loss : {}'.format(e, b, l))
+                acc = sess.run(accuracy, feed_dict = {images:x_batch, labels:y_batch,
+                                                      K.learning_phase(): 1})
+                print('training epoch : {}, batch : {}, accuracy : {}'.format(e, b, acc))
 
-        val_idx = np.random.permutation(np.arange(x_test.shape[0]), 128)
+        val_idx = np.random.randint(x_test.shape[0], size = 128)
         x_val = x_test[val_idx]
         y_val = y_test[val_idx]
-        l_val = sess.run(loss, feed_dict = {images:x_val, labels:y_val,
-                                            K.learning_phase(): 1})
-        print('validation loss epoch : {}, batch : {}, loss : {}'.format(e, b, l_val))
+        acc_val = sess.run(accuracy, feed_dict = {images:x_val, labels:y_val,
+                                                  K.learning_phase(): 1})
+        print('validation epoch : {}, accuracy : {}'.format(e, b, acc_val))
         
-        model.save_weights('./weights_{}_{}.h5'.format(e, b))
+        model.save_weights('./weights_{}.h5'.format(e))
+
+def valid(weights_file):
+    
+    images = tf.placeholder(tf.float32, (None, 32, 32, 3), name = 'images')
+    labels = tf.placeholder(tf.float32, (None, 10), name = 'labels')
+    model = build_simpleCNN()
+    labels_ = model(images)
+    loss = tf.reduce_mean(categorical_crossentropy(labels, labels_))
+    accuracy = tf.reduce_mean(tf.reduce_sum(labels*labels_, axis = 1))
+    
+    model.load_weights(weights_file)
+
+    print('load cifar10 data ...')
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    y_train = to_categorical(y_train, num_classes = 10)
+    y_test = to_categorical(y_test, num_classes = 10)
+
+    val_idx = np.random.randint(x_test.shape[0], size = 128)
+    x_val = x_test[val_idx]
+    y_val = y_test[val_idx]
+    acc = sess.run(accuracy, feed_dict = {images:x_val, labels:y_val,
+                                          K.learning_phase(): 1})
+    print('validation accuracy : {}'.format(acc))
 
 if __name__ == '__main__':
-    main()
-
-            
-        
     
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-w', '--weights_file', type = str, default = None,
+                        help = 'weight file path, if require validation')
+    args = parser.parse_args()
 
-    
+    if args.weights_file is None:
+        main()
+    else:
+        valid(args.weights_file)
 
+    sess.close()
