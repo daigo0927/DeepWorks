@@ -96,7 +96,7 @@ class TrainCNN(object):
 
                 self.sess.run(self.opt,
                               feed_dict = {self.images:x_batch, self.labels:y_batch,
-                                                     K.learning_phase(): 1})
+                                           K.learning_phase(): 1})
 
                 if b%100 == 0:
                     acc = self.sess.run(self.accuracy,
