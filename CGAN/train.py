@@ -16,89 +16,72 @@ sys.path.append(os.pardir)
 from misc.utils import combine_images
 from misc.dataIO import InputSampler
 
-def main():
-    parser = argparse.ArgumentParser()
-    # optimization
-    parser.add_argument('-e', '--epochs', type=int, default=20,
-                        help = 'number of epochs [20]')
-    parser.add_argument('--lr_g', type = float, default = 1e-4,
-                        help = 'learning rate for generator [1e-4]')
-    parser.add_argument('--lr_d', type = float, default = 1e-4,
-                        help = 'learning rate for discriminator [1e-4]')
-    parser.add_argument('--train_size', type = int, default = np.inf,
-                        help = 'size of trainind data [np.inf]')
-    parser.add_argument('--batch_size', type = int, default = 64,
-                        help = 'size of mini-batch [64]')
-    parser.add_argument('--nd', type = int, default = 5,
-                        help = 'training schedule for dicriminator by generator [5]')
-    parser.add_argument('--generator', type = str, default = 'deconv',
-                        choices = ['deconv'],
-                        help = 'choose generator type [deconv]')
-    # data {/O
-    parser.add_argument('--target_size', type = int, default = 108,
-                        help = 'target area of training data [108]')
-    parser.add_argument('--image_size', type = int, default = 64,
-                        help = 'size of generated image [64]')
-    parser.add_argument('-d', '--datadir', type = str, nargs = '+', required = True,
-                        help = 'path to directory contains training (image) data')
-    parser.add_argument('--split', type = int, default = 5,
-                        help = 'load data, by [5] split')
-    parser.add_argument('--loadweight', type = str, default = False,
-                        help = 'path to directory conrtains trained weights [False]')
-    parser.add_argument('--modeldir', type = str, default = './model',
-                        help = 'path to directory put trained weighted [self./model]')
-    parser.add_argument('--sampledir', type = str, default = './image',
-                        help = 'path to directory put generated image samples [./image]')
-    args = parser.parse_args()
+def main(epochs, lr_g, lr_d,
+         train_size, batch_size, nd, generator, label_size,
+         target_size, image_size,
+         datadir, split, loadweight, modeldir, sampledir):
 
-    for key in vars(args).keys():
-        print('{} : {}'.format(key, vars(args)[key]))
+    if generator == 'deconv':
+        gen = GeneratorDeconv(input_size = 100 + label_size
+                              image_size = image_size)
+    else:
+        raise ValueError('required generator type is not supported')
+        
+    disc = Discriminator(image_size, 3+label_size)
 
-    disc = Discriminator(args.image_size)
-    gen = GeneratorDeconv(args.image_size)
+    cgan = ConditionalWassersteinGAN(gen = gen, disc = disc,
+                                     label_size = label_size,
+                                     z_dim = 100, image_size = image_size,
+                                     lr_d =  lr_d,
+                                     lr_g =  lr_g)
 
-    wgan = WassersteinGAN(gen = gen, disc = disc,
-                          z_dim = 100, image_size = args.image_size,
-                          lr_d =  args.lr_d,
-                          lr_g =  args.lr_g)
+    sampler = InputSampler(datadir = datadir,
+                           target_size = target_size, image_size = image_size,
+                           split = split, num_utilize = train_size)
 
-    sampler = InputSampler(datadir = args.datadir,
-                           target_size = args.target_size, image_size = args.image_size,
-                           split = args.split, num_utilize = args.train_size)
-
-    wgan.train(nd = args.nd,
+    cgan.train(nd = nd,
                sampler = sampler,
-               epochs = args.epochs,
-               batch_size = args.batch_size,
-               sampledir = args.sampledir,
-               modeldir = args.modeldir)
+               epochs = epochs,
+               batch_size = batch_size,
+               sampledir = sampledir,
+               modeldir = modeldir)
     
-
-class WassersteinGAN:
+class ConditionalWassersteinGAN:
 
     def __init__(self,
                  gen, disc,
+                 label_size,
                  z_dim, image_size,
                  lr_d, lr_g):
 
+        self.sess = tf.Session()
+        K.set_session(self.sess)
+
         self.gen = gen
         self.disc = disc
+        self.label_size = label_size
         self.z_dim = z_dim
         self.image_size = image_size
 
-        self.x = tf.placeholder(tf.float32,
-                                (None, self.image_size, self.image_size, 3),
-                                name = 'x')
-        self.z = tf.placeholder(tf.float32,
-                                (None, self.z_dim),
+        self._build_graph()
+
+    def _build_graph(self):
+
+        self.z = tf.placeholder(tf.float32, (None, self.z_dim),
                                 name = 'z')
-        self.x_ = self.gen(self.z)
+        self.label = tf.placeholder(tf.float32, (None, self.label_size))
+        z_and_label = tf.concat((self.z, self.label), axis = 1)
+        self.x_ = self.gen(z_and_label)
+        
+        self.x = tf.placeholder(tf.float32, (None, self.image_size, self.image_size, 3),
+                                name = 'x')
+        label_panels = tf.ones()
 
-        self.d = self.disc(self.x)
         self.d_ = self.disc(self.x_)
+        self.d = self.disc(self.x)
 
-        self.d_loss = -(tf.reduce_mean(self.d) - tf.reduce_mean(self.d_))
         self.g_loss = -tf.reduce_mean(self.d_)
+        self.d_loss = -(tf.reduce_mean(self.d) - tf.reduce_mean(self.d_))
 
         # gradient penalty
         alpha = tf.random_uniform((tf.shape(self.x)[0], 1, 1, 1),
@@ -120,11 +103,7 @@ class WassersteinGAN:
         self.g_opt = tf.train.AdamOptimizer(learning_rate = self.lr_g,
                                             beta1 = 0., beta2 = 0.9)\
                      .minimize(self.g_loss, var_list = self.gen.trainable_weights)
-
-        self.saver = tf.train.Saver()
-
-        self.sess = tf.Session()
-        K.set_session(self.sess)
+        
 
     def train(self,
               nd, sampler,
@@ -180,4 +159,44 @@ class WassersteinGAN:
             # self.disc.save_weights(modeldir + '/d_{}epoch.h5'.format(e))
 
 if __name__ == '__main__':
-    main()
+    
+    parser = argparse.ArgumentParser()
+    # optimization
+    parser.add_argument('-e', '--epochs', type=int, default=20,
+                        help = 'number of epochs [20]')
+    parser.add_argument('--lr_g', type = float, default = 1e-4,
+                        help = 'learning rate for generator [1e-4]')
+    parser.add_argument('--lr_d', type = float, default = 1e-4,
+                        help = 'learning rate for discriminator [1e-4]')
+    parser.add_argument('--train_size', type = int, default = np.inf,
+                        help = 'size of trainind data [np.inf]')
+    parser.add_argument('--batch_size', type = int, default = 64,
+                        help = 'size of mini-batch [64]')
+    parser.add_argument('--nd', type = int, default = 5,
+                        help = 'training schedule for dicriminator by generator [5]')
+    parser.add_argument('--generator', type = str, default = 'deconv',
+                        choices = ['deconv'],
+                        help = 'choose generator type [deconv]')
+    parser.add_argument('--label_size', type = int, default = 10,
+                        help = 'label size, [10]')
+    # data I/O
+    parser.add_argument('--target_size', type = int, default = 108,
+                        help = 'target area of training data [108]')
+    parser.add_argument('--image_size', type = int, default = 64,
+                        help = 'size of generated image [64]')
+    parser.add_argument('-d', '--datadir', type = str, nargs = '+', required = True,
+                        help = 'path to dir contains training (image) data')
+    parser.add_argument('--split', type = int, default = 5,
+                        help = 'load data, by [5] split')
+    parser.add_argument('--loadweight', type = str, default = False,
+                        help = 'path to dir conrtains trained weights [False]')
+    parser.add_argument('--modeldir', type = str, default = './model',
+                        help = 'path to dir put trained weighted [self./model]')
+    parser.add_argument('--sampledir', type = str, default = './image',
+                        help = 'path to dir put generated image samples [./image]')
+    args = parser.parse_args()
+
+    for key in vars(args).keys():
+        print('{} : {}'.format(key, vars(args)[key]))
+    
+    main(**vars(args))
