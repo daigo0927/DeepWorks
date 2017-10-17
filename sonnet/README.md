@@ -1,5 +1,5 @@
 # CNN with Sonnet
-Simple CNN implementation with [Sonnet](https://github.com/deepmind/sonnet)
+Simple CNN implementation with [Sonnet](https://github.com/deepmind/sonnet) : DeepMind library
 
 ## my main environment
 - python 3.5
@@ -8,7 +8,7 @@ Simple CNN implementation with [Sonnet](https://github.com/deepmind/sonnet)
 
 ## description
 
-- Sonnet is wrapper of tensorflow
+- Sonnet is wrapper of tensorflow developed by DeepMind.
 
 ## usage
 - train (set epochs:20, batchsize:128 as default)
@@ -20,5 +20,5 @@ python train.py
 - validation of learned weights
 
 ```
-python train.py -w /path/to/weights.h5
+python train.py -w /path/to/model.ckpt
 ```
