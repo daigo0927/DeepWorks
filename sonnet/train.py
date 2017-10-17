@@ -5,51 +5,43 @@ sys.path.append(os.pardir)
 
 import numpy as np
 import tensorflow as tf
-import argparse
+import sonnet as snt
 
-from keras import backend as K
-from keras.models import Model
-from keras.layers import Input, Dense, Flatten, Activation
-from keras.layers.pooling import MaxPooling2D
-from keras.layers.normalization import BatchNormalization
-from keras.layers.convolutional import Conv2D
-from keras.losses import categorical_crossentropy
-from keras.initializers import RandomNormal
+import argparse
 
 from misc.utils import load_cifar10
 
-init = RandomNormal(mean = 0., stddev = 0.02)
+def build_simpleCNN(num_output = 10):
 
-def build_simpleCNN(input_shape = (32, 32, 3), num_output = 10):
-
-    h, w, nch = input_shape
-    assert h == w, 'expect input shape (h, w, nch), h == w'
-
-    images = Input(shape = (h, h, nch))
-    x = Conv2D(64, (4, 4), strides = (1, 1),
-               kernel_initializer = init, padding = 'same')(images)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = MaxPooling2D(pool_size = (2, 2))(x)
-    x = Conv2D(128, (4, 4), strides = (1, 1),
-               kernel_initializer = init, padding = 'same')(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = MaxPooling2D(pool_size = (2, 2))(x)
-    x = Flatten()(x)
-    outputs = Dense(num_output, kernel_initializer = init,
-                    activation = 'softmax')(x)
-
-    model = Model(inputs = images, outputs = outputs)
-    return model
+    def build(inputs):
+        x = snt.Conv2D(output_channels = 64, kernel_shape = (4, 4),
+                       stride = (1, 1), padding = 'VALID')(inputs)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.nn.relu(x)
+        x = tf.nn.max_pool(x,
+                           ksize = [1, 2, 2, 1],
+                           strides = [1, 2, 2, 1],
+                           padding = 'SAME')
+        x = snt.Conv2D(output_channels = 128, kernel_shape = (4, 4),
+                       stride = (1, 1), padding = 'VALID')(x)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.nn.relu(x)
+        x = tf.nn.max_pool(x,
+                           ksize = [1, 2, 2, 1],
+                           strides = [1, 2, 2, 1],
+                           padding = 'SAME')
+        x = snt.BatchFlatten()(x)
+        outputs = snt.Linear(output_size = num_output)(x)
+        return outputs
+    
+    return snt.Module(build)
 
 class TrainCNN(object):
 
     def __init__(self):
 
         self.sess = tf.Session()
-        K.set_session(self.sess)
-        
+                
         self._build_graph()
         self._load_data()
     
@@ -59,12 +51,16 @@ class TrainCNN(object):
         self.labels = tf.placeholder(tf.float32, (None, 10), name = 'labels')
         self.model = build_simpleCNN()
         
-        self.preds = self.model(self.images)
-        self.loss = tf.reduce_mean(categorical_crossentropy(self.labels, self.preds))
+        self.logits = self.model(self.images)
+        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+            labels = self.labels, logits = self.logits))
+        
+        self.preds = tf.nn.softmax(self.logits)
         self.accuracy = tf.reduce_mean(tf.reduce_sum(self.labels*self.preds, axis = 1))
 
-        self.opt = tf.train.AdamOptimizer()\
-                           .minimize(self.loss, var_list = self.model.trainable_weights)
+        self.opt = tf.train.AdamOptimizer().minimize(self.loss)
+
+        self.saver = tf.train.Saver()
 
         self.sess.run(tf.global_variables_initializer())
 
@@ -86,29 +82,35 @@ class TrainCNN(object):
                 y_batch = self.y_train[permute_idx[b*batch_size:(b+1)*batch_size]]
 
                 self.sess.run(self.opt,
-                              feed_dict = {self.images:x_batch, self.labels:y_batch,
-                                           K.learning_phase(): 1})
+                              feed_dict = {self.images:x_batch, self.labels:y_batch})
 
                 if b%100 == 0:
                     acc = self.sess.run(self.accuracy,
-                                        feed_dict = {self.images:x_batch, self.labels:y_batch,
-                                                     K.learning_phase(): 1})
+                                        feed_dict = {self.images:x_batch, self.labels:y_batch})
                     print('training epoch : {}, batch : {}, accuracy : {}'.format(e, b, acc))
 
             self.valid()
-            self.model.save_weights('./weights_{}.h5'.format(e))
+            self.saver.save(self.sess, './model_{}.ckpt'.format(e))
 
-    def valid(self, weights_file = None):
+    def valid(self, batch_size = 128, weights_file = None):
+        
         if weights_file is not None:
-            self.model.load_weights(weights_file)
+            self.saver.restore(self.sess, weights_file)
 
-        val_idx = np.random.randint(self.x_test.shape[0], size = 128)
-        x_val = self.x_test[val_idx]
-        y_val = self.y_test[val_idx]
-        acc_val = self.sess.run(self.accuracy,
-                                feed_dict = {self.images:x_val, self.labels:y_val,
-                                             K.learning_phase(): 1})
-        print('validation accuracy : {}'.format(acc_val))
+        data_size = self.x_test.shape[0]
+        num_batches = int(data_size/batch_size)
+
+        acc_vals = []
+        permute_idx = np.random.permutation(np.arange(data_size))
+        for b in tqdm(np.arange(num_batches)):
+            x_val = self.x_test[permute_idx[b*batch_size:(b+1)*batch_size]]
+            y_val = self.y_test[permute_idx[b*batch_size:(b+1)*batch_size]]
+
+            acc_val = self.sess.run(self.accuracy,
+                                    feed_dict = {self.images:x_val, self.labels:y_val})
+            acc_vals.append(acc_val)
+            
+        print('validation accuracy : {}'.format(np.mean(acc_vals)))
 
     def close(self):
         self.sess.close()
