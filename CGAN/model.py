@@ -18,65 +18,58 @@ from keras.initializers import RandomNormal
 
 init = RandomNormal(mean = 0., stddev = 0.02)
 
+import tensorflow as tf
+import sonnet as snt
+
 # ConvTranspose (often called Deconv) ver.
-def GeneratorDeconv(input_size = 100, image_size = 64): 
+def GeneratorDeconv(input_size = 100, image_size = 64):
 
-    w = int(image_size)
+    def build(inputs):
+        x = snt.Linear(output_size = 512*int(image_size/16)**2)(inputs)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.nn.relu(x)
+        x = tf.reshape(x, [-1, int(image_size/16), int(image_size/16), 512])
+        x = snt.Conv2DTranspose(output_channels = 256, kernel_shape = (4, 4),
+                                stride = (2, 2), padding = 'SAME')(x)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.nn.relu(x)
+        x = snt.Conv2DTranspose(output_channels = 128, kernel_shape = (4, 4),
+                                stride = (2, 2), padding = 'SAME')(x)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.nn.relu(x)
+        x = snt.Conv2DTranspose(output_channels = 64, kernel_shape = (4, 4),
+                                stride = (2, 2), padding = 'SAME')(x)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.nn.relu(x)
+        x = snt.Conv2DTranspose(output_channels = 3, kernel_shape = (4, 4),
+                                stride = (2, 2), padding = 'SAME')(x)
+        images = tf.nn.tanh(x)
+        return images
 
-    inputs = Input(shape = (input_size, ))
-    x = Dense(512*int(w/16)**2)(inputs) #shape(512*(w/16)**2,)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Reshape((int(w/16), int(w/16), 512))(x) # shape(w/16, w/16, 512)
-    x = Conv2DTranspose(256, (4, 4), strides = (2, 2),
-                        kernel_initializer = init,
-                        padding = 'same')(x) # shape(w/8, w/8, 256)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(128, (4, 4), strides = (2, 2),
-                        kernel_initializer = init,
-                        padding = 'same')(x) # shape(w/4, w/4, 128)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(64, (4, 4), strides = (2, 2),
-                        kernel_initializer = init,
-                        padding = 'same')(x) # shape(w/2, w/2, 64)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(3, (4, 4), strides= (2, 2),
-                        kernel_initializer = init,
-                        padding = 'same')(x) # shape(w, w, 3)
-    images = Activation('tanh')(x)
-
-    model = Model(inputs = inputs, outputs = images)
-    model.summary()
-    return model
+    return snt.Module(build, name = 'generator')
 
 
-def Discriminator(image_size = 64, input_channel = 3):
+def Discriminator():
 
-    w = int(image_size)
-    ch = int(input_channel)
+    def build(inputs):
+        x = snt.Conv2D(output_channels = 64, kernel_shape = (4, 4),
+                       stride = (2, 2), padding = 'SAME')(inputs)
+        x = tf.contrib.keras.layers.LeakyReLU(0.2)(x)
+        x = snt.Conv2D(output_channels = 128, kernel_shape = (4, 4),
+                       stride = (2, 2), padding = 'SAME')(inputs)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.contrib.keras.layers.LeakyReLU(0.2)(x)
+        x = snt.Conv2D(output_channels = 256, kernel_shape = (4, 4),
+                       stride = (2, 2), padding = 'SAME')(inputs)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.contrib.keras.layers.LeakyReLU(0.2)(x)
+        x = snt.Conv2D(output_channels = 512, kernel_shape = (4, 4),
+                       stride = (2, 2), padding = 'SAME')(inputs)
+        x = snt.BatchNorm()(x, is_training = True)
+        x = tf.contrib.keras.layers.LeakyReLU(0.2)(x)
+        x = snt.BatchFlatten()(x)
+        outputs = snt.Linear(output_size = 1)(x)
+        return outputs
 
-    images = Input(shape = (w, w, input_channel))
-    x = Conv2D(64, (4, 4), strides = (2, 2),
-               kernel_initializer = init, padding = 'same')(images) # shape(w/2, w/2, 32)
-    x = LeakyReLU(0.2)(x)
-    x = Conv2D(128, (4, 4), strides = (2, 2),
-               kernel_initializer = init, padding = 'same')(x) # shape(w/4, w/4, 64)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(0.2)(x)
-    x = Conv2D(256, (4, 4), strides = (2, 2),
-               kernel_initializer = init, padding = 'same')(x) # shape(w/8, w/8, 128)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(0.2)(x)
-    x = Conv2D(512, (4, 4), strides = (2, 2),
-               kernel_initializer = init, padding = 'same')(x) # shape(L/16, L/16, 256)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(0.2)(x)
-    x = Flatten()(x)
-    outputs = Dense(1)(x)
-    
-    model = Model(inputs = images, outputs = outputs)
-    model.summary()
-    return model
+    return snt.Module(build, name = 'discriminator')
+
