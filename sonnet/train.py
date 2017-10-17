@@ -8,6 +8,7 @@ import tensorflow as tf
 import sonnet as snt
 
 import argparse
+from tqdm import tqdm
 
 from misc.utils import load_cifar10
 
