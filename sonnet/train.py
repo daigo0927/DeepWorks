@@ -16,7 +16,7 @@ def build_simpleCNN(num_output = 10):
 
     def build(inputs):
         x = snt.Conv2D(output_channels = 64, kernel_shape = (4, 4),
-                       stride = (1, 1), padding = 'VALID')(inputs)
+                       stride = (1, 1), padding = 'SAME')(inputs)
         x = snt.BatchNorm()(x, is_training = True)
         x = tf.nn.relu(x)
         x = tf.nn.max_pool(x,
@@ -24,7 +24,7 @@ def build_simpleCNN(num_output = 10):
                            strides = [1, 2, 2, 1],
                            padding = 'SAME')
         x = snt.Conv2D(output_channels = 128, kernel_shape = (4, 4),
-                       stride = (1, 1), padding = 'VALID')(x)
+                       stride = (1, 1), padding = 'SAME')(x)
         x = snt.BatchNorm()(x, is_training = True)
         x = tf.nn.relu(x)
         x = tf.nn.max_pool(x,
