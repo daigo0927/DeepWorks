@@ -1,6 +1,7 @@
 # coding:utf-8
 
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from glob import glob
 
@@ -47,5 +48,19 @@ class InputSampler:
     def noise_sample(self, batch_size, noise_dim = 100):
         noise = np.random.uniform(-1, 1, (batch_size, noise_dim))
         return noise
-        
-        
+
+    
+class LabelfileLoader(object):
+
+    @staticmethod
+    def load(filepath):
+        with open(filepath, 'rb') as f:
+            label = pd.read_csv(f, header = None)
+        return label
+
+    @staticmethod
+    def load_celebA(filepath):
+        with open(filepath, 'rb') as f:
+            label = pd.read_csv(f, delim_whitespace=True, header=1)
+        return label
+
