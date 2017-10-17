@@ -123,7 +123,7 @@ def main(batch_size, num_epochs, weights_file):
     if weights_file is None:
         trainer.train(batch_size, num_epochs)
     else:
-        trainer.valid(weights_file)
+        trainer.valid(weights_file = weights_file)
 
     trainer.close()
 
