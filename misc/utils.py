@@ -2,10 +2,21 @@
 
 import numpy as np
 import math
+import tensorflow as tf
 from scipy.misc import imread, imresize
 
 from keras.datasets import cifar10
 from keras.utils.np_utils import to_categorical
+
+def tf_image_label_concat(image, label,
+                          image_size, label_size):
+
+    label_ = tf.reshape(label, (-1, 1, 1, label_size))
+    label_panel = tf.tile(label_, # shape(None, width, width, feature)
+                          multiples = [1, image_size, image_size, 1])
+    image_label = tf.concat((image, label_panel), axis = 3)
+    
+    return image_label # shape(None, width, width, channel+feature)
 
 def load_cifar10():
     print('load cifar10 data ...')
