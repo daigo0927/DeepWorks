@@ -10,7 +10,7 @@ from keras.utils.np_utils import to_categorical
 
 def leaky_relu(leak = 0.2):
     def f(inputs):
-        return tf.maximum(tf.minimum(0., leak*x), x)
+        return tf.maximum(tf.minimum(0., leak*inputs), inputs)
     return f
 
 def tf_image_label_concat(image, label,
