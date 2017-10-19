@@ -111,8 +111,8 @@ class ConditionalWassersteinGAN:
                 if batch in np.linspace(0, num_batches, sampler.split+1, dtype = int):
                     sampler.reload()
 
-                d_iter = nd
-
+                d_iter = nd                    
+                
                 for _ in range(d_iter):
                     bx, bl = sampler.image_label_sample(batch_size)
                     bz = sampler.noise_sample(batch_size)
