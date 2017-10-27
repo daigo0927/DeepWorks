@@ -22,5 +22,5 @@ of course you can directly design layer architecture
 
 ```python
 model = ResNetBuilder.build(num_outputs = 100,
-                            block_fn = 'plain_block', repetitions = [2, 2, 3, 3])
+                            block_fn = 'plain', repetitions = [2, 2, 3, 3])
 ```
