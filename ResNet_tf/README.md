@@ -1,4 +1,4 @@
-# Residual Networks implemented with Keras
+# Residual Networks implemented with tensorflow
 
 greatly thanks [here](http://www.iandprogram.net/entry/2016/06/06/180806)
 
