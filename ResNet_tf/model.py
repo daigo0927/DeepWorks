@@ -153,7 +153,7 @@ class ResNetBuilder(object):
                                    block_fn = bottleneck_block,
                                    repetitions = [3, 8, 36, 3])
     @staticmethod
-    def build_resnet50(num_output):
+    def build_resnet200(num_output):
         return ResNetBuilder.build(num_output = num_output,
                                    block_fn = bottleneck_block,
                                    repetitions = [3, 24, 36, 3])
