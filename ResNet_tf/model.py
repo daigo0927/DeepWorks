@@ -121,6 +121,12 @@ class ResNetBuilder(object):
     def build(num_output,
               block_fn,
               repetitions):
+
+        assert block_fn in ['plain', 'bottleneck'], 'choose \'plain\' or \'bottleneck\''
+        if block_fn == 'plain':
+            block_fn = plain_block
+        elif block_fn == 'bottleneck':
+            block_fn = bottleneck_block
         
         model = ResNet(num_output = num_output,
                        block_fn = block_fn,
@@ -130,30 +136,30 @@ class ResNetBuilder(object):
     @staticmethod
     def build_resnet18(num_output):
         return ResNetBuilder.build(num_output = num_output,
-                                   block_fn = plain_block,
+                                   block_fn = 'plain',
                                    repetitions = [2, 2, 2, 2])
     @staticmethod
     def build_resnet34(num_output):
         return ResNetBuilder.build(num_output = num_output,
-                                   block_fn = plain_block,
+                                   block_fn = 'plain',
                                    repetitions = [3, 4, 6, 3])
     @staticmethod
     def build_resnet50(num_output):
         return ResNetBuilder.build(num_output = num_output,
-                                   block_fn = bottleneck_block,
+                                   block_fn = 'bottleneck',
                                    repetitions = [3, 4, 6, 3])
     @staticmethod
     def build_resnet101(num_output):
         return ResNetBuilder.build(num_output = num_output,
-                                   block_fn = bottleneck_block,
+                                   block_fn = 'bottleneck',
                                    repetitions = [3, 4, 23, 3])
     @staticmethod
     def build_resnet152(num_output):
         return ResNetBuilder.build(num_output = num_output,
-                                   block_fn = bottleneck_block,
+                                   block_fn = 'bottleneck',
                                    repetitions = [3, 8, 36, 3])
     @staticmethod
     def build_resnet200(num_output):
         return ResNetBuilder.build(num_output = num_output,
-                                   block_fn = bottleneck_block,
+                                   block_fn = 'bottleneck',
                                    repetitions = [3, 24, 36, 3])
