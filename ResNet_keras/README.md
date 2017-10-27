@@ -18,10 +18,12 @@ model = ResNetBuilder.build_resnet_50(input_shape = (224, 224, 3), num_output = 
 ```
 
 of course you can directly design layer architecture
-- ```block_fn``` requires residual block type, choose 'plain_block' or 'bottleneck_block'
+- ```block_fn``` requires residual block type, choose plain_block or bottleneck_block
 - ```repetitions``` requires repetition number for each residual scale, input [a, b, c, d]
 
 ```python
+from ResNet_keras.model import plain_block, bottlenech_block # additional import
+
 model = ResNetBuilder.build(input_shape = (224, 224, 3), num_outputs = 100,
                             block_fn = 'plain_block', repetitions = [2, 2, 3, 3])
 ```
