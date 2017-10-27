@@ -13,7 +13,7 @@ if use preset model (18, 34, 50, 101, 152, 200 layers)
 ```python
 from ResNet_tf.model import ResNetBuilder
 
-model = ResNetBuilder.build_resnet50(input_shape = (224, 224, 3), num_output = 100)
+model = ResNetBuilder.build_resnet50(num_output = 100)
 ```
 
 of course you can directly design layer architecture
