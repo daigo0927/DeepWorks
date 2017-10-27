@@ -52,12 +52,17 @@ class U_Net(object):
 
     def __init__(self,
                  output_ch, # outputs channel, size is same as inputs
-                 block_fn,
+                 block_fn = 'batch_norm',
                  name = 'unet'):
         self.output_ch = output_ch
-        self.block_fn = block_fn
         self.name = name
 
+        assert block_fn in ['batch_norm', 'origin'], 'choose \'batch_norm\' or \'origin\''
+        if block_fn == 'batch_norm':
+            self.block_fn = _conv_bn_relu
+        elif block_fn == 'origin':
+            self.block_fn = _conv_relu
+            
     def __call__(self, inputs, reuse = True):
         with tf.variable_scope(self.name) as vs:
             tf.get_variable_scope()
