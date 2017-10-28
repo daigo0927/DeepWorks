@@ -25,5 +25,5 @@ of course you can directly design layer architecture
 from ResNet_keras.model import plain_block, bottlenech_block # additional import
 
 model = ResNetBuilder.build(input_shape = (224, 224, 3), num_outputs = 100,
-                            block_fn = 'plain_block', repetitions = [2, 2, 3, 3])
+                            block_fn = plain_block, repetitions = [2, 2, 3, 3])
 ```
