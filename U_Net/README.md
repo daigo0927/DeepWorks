@@ -23,3 +23,11 @@ model = U_Net(ouput_ch = 10, block_fn = 'origin')
   - 'origin' is (I think) same as original paper.
   - 'batch_norm' use BatchNormalization.
 
+```python
+import tensorflow as tf
+
+# utilize model
+inputs = tf.placeholder(tf.float32, shape = (None, 128, 128, 3))
+outputs_ = model(inputs, reuse = False)
+# script wil continues...
+```
