@@ -52,7 +52,7 @@ class U_Net(object):
 
     def __init__(self,
                  output_ch, # outputs channel, size is same as inputs
-                 block_fn = 'batch_norm',
+                 block_fn = 'origin',
                  name = 'unet'):
         self.output_ch = output_ch
         self.name = name
