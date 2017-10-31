@@ -91,8 +91,8 @@ def main(epochs,
 
     if not os.path.exists(modeldir):
         os.mkdir(modeldir)
-    if not os.path.exists(modeldir):
-        os.mkdir(modeldir)
+    if not os.path.exists(sampledir):
+        os.mkdir(sampledir)
 
     trainer = Trainer(image_size = image_size)
     trainer.train(sampler = sampler,
