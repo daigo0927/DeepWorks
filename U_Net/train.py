@@ -72,7 +72,7 @@ class Trainer(object):
                                         feed_dict = {self.images:imgs_})
                     imgs_blur = combine_images(imgs_blur)*127.5 + 127.5
                     # clip imgs_reconst value [-1, 1] for visualize
-                    imgs_reconst = tf.clip_by_value(imgs_reconst, -1, 1)
+                    imgs_reconst = np.clip(imgs_reconst, -1., 1.)
                     imgs_reconst = combine_images(imgs_reconst)*127.5 + 127.5
                     Image.fromarray(imgs_blur.astype(np.uint8))\
                          .save(sampledir + '/blur_{}_{}.png'.format(e, batch))
