@@ -73,9 +73,9 @@ class Trainer(object):
                     imgs_blur = combine_images(imgs_blur)*127.5 + 127.5
                     imgs_reconst = combine_images(imgs_reconst)*127.5 + 127.5
                     Image.fromarray(imgs_blur.astype(np.uint8))\
-                         .save(sampledir + 'blur_{}_{}.png'.format(e, batch))
+                         .save(sampledir + '/blur_{}_{}.png'.format(e, batch))
                     Image.fromarray(imgs_reconst.astype(np.uint8))\
-                         .save(sampledir + 'reconst_{}_{}.png'.format(e, batch))
+                         .save(sampledir + '/reconst_{}_{}.png'.format(e, batch))
 
             self.saver.save(self.sess, modeldir + '/model{}.ckpt'.format(e))
 
