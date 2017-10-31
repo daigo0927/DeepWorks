@@ -31,7 +31,7 @@ class Trainer(object):
         self.images_blur = tf.image.resize_images(images_mini,
                                                   size = (image_size, image_size))
         
-        self.net = U_Net(output_ch = 3)
+        self.net = U_Net(output_ch = 3, block_fn = 'origin')
         self.images_reconst = self.net(self.images_blur, reuse = False)
         # self.image_reconst can be [-inf +inf], so need to clip its value if visualize them as images.
         self.loss = tf.reduce_mean((self.images_reconst - self.images)**2)
