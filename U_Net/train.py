@@ -122,7 +122,7 @@ if __name__ == '__main__':
                         help = 'load data, by [5] split')
     parser.add_argument('-m', '--modeldir', type = str, default = './model',
                         help = '/path/to/dir put trained model weights [./model]')
-    parser.add_argument('-s', '--sampledir', type = str, default = '/image',
+    parser.add_argument('-s', '--sampledir', type = str, default = './image',
                         help = '/path/to/dir put sample trained images [./image]')
     args = parser.parse_args()
 
