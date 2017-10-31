@@ -26,15 +26,15 @@ class Trainer(object):
         self.images = tf.placeholder(tf.float32,
                                      shape = (None, image_size, image_size, 3))
         images_mini = tf.image.resize_images(self.images,
-                                             size = (int(image_size/3),
-                                                     int(image_size/3)))
+                                             size = (int(image_size/4),
+                                                     int(image_size/4)))
         self.images_blur = tf.image.resize_images(images_mini,
                                                   size = (image_size, image_size))
         
         self.net = U_Net(output_ch = 3)
-        self.logits = self.net(self.images_blur, reuse = False)
-        self.outputs = tf.nn.tanh(self.logits)
-        self.loss = tf.reduce_mean((self.outputs - self.images)**2)
+        self.images_reconst = self.net(self.images_blur, reuse = False)
+        # self.image_reconst can be [-inf +inf], so need to clip its value if visualize them as images.
+        self.loss = tf.reduce_mean((self.images_reconst - self.images)**2)
         self.opt = tf.train.AdamOptimizer()\
                            .minimize(self.loss, var_list = self.net.vars)
 
@@ -68,9 +68,11 @@ class Trainer(object):
                 if batch%100 == 0:
                     imgs_ = sampler.image_sample(9)
                     imgs_blur, imgs_reconst \
-                        = self.sess.run([self.images_blur, self.outputs],
+                        = self.sess.run([self.images_blur, self.images_reconst],
                                         feed_dict = {self.images:imgs_})
                     imgs_blur = combine_images(imgs_blur)*127.5 + 127.5
+                    # clip imgs_reconst value [-1, 1] for visualize
+                    imgs_reconst = tf.clip_by_value(imgs_reconst, -1, 1)
                     imgs_reconst = combine_images(imgs_reconst)*127.5 + 127.5
                     Image.fromarray(imgs_blur.astype(np.uint8))\
                          .save(sampledir + '/blur_{}_{}.png'.format(e, batch))
