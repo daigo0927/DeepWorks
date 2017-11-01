@@ -57,7 +57,8 @@ class Trainer(object):
                 if batch in np.linspace(0, num_batches, sampler.split+1, dtype = int):
                     sampler.reload()
 
-                imgs = sampler.image_sample(batch_size)
+                imgs = sampler.image_sample(batch_size) # value [-1 - 1]
+                imgs = (imgs + 1.)/2 # value [0 - 1]
                 self.sess.run(self.opt, feed_dict = {self.images:imgs})
 
                 if batch%10 == 0:
@@ -67,13 +68,14 @@ class Trainer(object):
 
                 if batch%100 == 0:
                     imgs_ = sampler.image_sample(9)
+                    imgs_ = (imgs_ + 1.)/2 # scale value [0 - 1]
                     imgs_blur, imgs_reconst \
                         = self.sess.run([self.images_blur, self.images_reconst],
                                         feed_dict = {self.images:imgs_})
-                    imgs_blur = combine_images(imgs_blur)*127.5 + 127.5
-                    # clip imgs_reconst value [-1, 1] for visualize
-                    imgs_reconst = np.clip(imgs_reconst, -1., 1.)
-                    imgs_reconst = combine_images(imgs_reconst)*127.5 + 127.5
+                    imgs_blur = combine_images(imgs_blur)*255.
+                    # clip imgs_reconst value [0, 1] for visualize
+                    imgs_reconst = np.clip(imgs_reconst, 0., 1.)
+                    imgs_reconst = combine_images(imgs_reconst)*255.
                     Image.fromarray(imgs_blur.astype(np.uint8))\
                          .save(sampledir + '/blur_{}_{}.png'.format(e, batch))
                     Image.fromarray(imgs_reconst.astype(np.uint8))\
