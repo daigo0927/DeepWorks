@@ -8,9 +8,23 @@ import tensorflow as tf
 
 import os, sys
 sys.path.append(os.pardir)
-from ResNet_tf.model import ResNetBuilder
-from Sonnet.train import build_simpleCNN
+# from ResNet_tf.model import ResNetBuilder
+# from Sonnet.train import build_simpleCNN
+from layers.blocks import bn_relu_conv
 from misc.utils import load_cifar10, load_cifar100
+
+class CNN(object):
+    def __init__(self,
+                 num_output,
+                 name = 'cnn'):
+        self.num_output = num_output
+        self.name = name
+
+    def __call__(self, inputs, reuse = True):
+        with tf.variable_scope(self.name) as vs:
+            tf.get_variable_scope()
+            if reuse:
+                vs.reuse_variables()
 
 class Trainer(object):
 
