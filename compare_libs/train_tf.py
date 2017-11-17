@@ -63,6 +63,9 @@ class Trainer(object):
     def _load_cifar10(self):
         (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar10()
 
+    def _load_cifar100(self):
+        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar100()
+
     def _build_graph(self):
 
         self.images = tf.placeholder(tf.float32,
@@ -87,6 +90,7 @@ class Trainer(object):
         self.accuracy = tf.reduce_mean(tf.reduce_sum(self.labels*self.preds, axis = 1))
         
         self.opt = tf.train.AdamOptimizer()\
+
                            .minimize(self.loss)# , var_list = self.net.vars)
 
         self.saver = tf.train.Saver()
