@@ -17,22 +17,27 @@ class Trainer(object):
     def __init__(self):
 
         self.sess = tf.Session()
-        self._load_cifar10()
+        self._load_cifar100()
         self._build_graph()
 
-    def _load_cifar10(self):
-        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar10()
+    def _load_cifar100(self):
+        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar100()
 
     def _build_graph(self):
 
         self.images = tf.placeholder(tf.float32,
                                      shape = (None, 32, 32, 3), name = 'images')
         self.labels = tf.placeholder(tf.float32,
-                                     shape = (None, 10), name = 'labels')
+                                     shape = (None, 100), name = 'labels')
 
-        self.net = build_simpleCNN()
+        # self.net = build_simpleCNN()
+        # self.logits = self.net(self.images)
         # self.net = ResNetBuilder.build_resnet18(num_output = 100)
-        self.logits = self.net(self.images)#, reuse = False)
+        # self.net = ResNetBuilder.build_resnet18(num_output = 10)
+        self.net = ResNetBuilder.build(num_output = 100,
+                                       block_fn = 'plain',
+                                       repetitions = [2, 0, 0, 0])
+        self.logits = self.net(self.images, reuse = False)
 
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
             labels = self.labels, logits = self.logits))
@@ -99,6 +104,7 @@ class Trainer(object):
             f.write('tensorflow')
             for lap in lap_times:
                 f.write(',' + str(lap))
+            f.write('\n')
 
 def train_tf(epochs, batch_size):
 
