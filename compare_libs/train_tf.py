@@ -90,7 +90,6 @@ class Trainer(object):
         self.accuracy = tf.reduce_mean(tf.reduce_sum(self.labels*self.preds, axis = 1))
         
         self.opt = tf.train.AdamOptimizer()\
-
                            .minimize(self.loss)# , var_list = self.net.vars)
 
         self.saver = tf.train.Saver()
