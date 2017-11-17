@@ -177,9 +177,9 @@ class Food101Sampler(object):
         labels = self.split_labels[sample_idx]
         return images, labels
 
-    def load_testset(self):
+    def load_testset(self, num_testset = 5000):
         test_images = np.array([get_image(path, self.target_size, self.image_size)
-                                for path in tqdm(self.test_image_paths)])
-        return test_images, test_labels
+                                for path in tqdm(self.test_image_paths[:num_testset])])
+        return test_images, self.test_labels[:num_testset]
 
 
