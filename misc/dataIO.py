@@ -7,7 +7,7 @@ from tqdm import tqdm
 from glob import glob
 import pdb
 
-from utils import *
+from .utils import *
 
 class InputSampler:
 
@@ -103,7 +103,7 @@ class LabelfileLoader(object):
 class Food101Sampler(object):
     def __init__(self,
                  metadir,
-                 target_size = 256,
+                 target_size = 512,
                  image_size = 128,
                  split = 5,
                  num_utilize = np.inf):
@@ -170,7 +170,7 @@ class Food101Sampler(object):
         self.split_labels = self.train_labels[split_idx]
 
     def sample(self, batch_size):
-        sample_idx = np.random.choice(len(self.data.index),
+        sample_idx = np.random.choice(len(self.data),
                                       batch_size,
                                       replace = True)
         images = self.data[sample_idx]
