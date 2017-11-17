@@ -181,5 +181,3 @@ class Food101Sampler(object):
         test_images = np.array([get_image(path, self.target_size, self.image_size)
                                 for path in tqdm(self.test_image_paths[:num_testset])])
         return test_images, self.test_labels[:num_testset]
-
-
