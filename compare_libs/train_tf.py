@@ -9,26 +9,31 @@ import tensorflow as tf
 import os, sys
 sys.path.append(os.pardir)
 from ResNet_tf.model import ResNetBuilder
-from misc.dataIO import Food101Sampler
+from Sonnet.train import build_simpleCNN
+from misc.utils import load_cifar10, load_cifar100
 
 class Trainer(object):
 
-    def __init__(self,
-                 image_size):
+    def __init__(self):
 
         self.sess = tf.Session()
-        self._build_graph(image_size = image_size)
+        self._load_cifar10()
+        self._build_graph()
 
-    def _build_graph(self, image_size):
+    def _load_cifar10(self):
+        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar10()
 
-        self.image_size = image_size
+    def _build_graph(self):
+
         self.images = tf.placeholder(tf.float32,
-                                     shape = (None, image_size, image_size, 3))
+                                     shape = (None, 32, 32, 3), name = 'images')
         self.labels = tf.placeholder(tf.float32,
-                                     shape = (None, 101))
+                                     shape = (None, 10), name = 'labels')
 
-        self.net = ResNetBuilder.build_resnet18(num_output = 101)
-        self.logits = self.net(self.images, reuse = False)
+        self.net = build_simpleCNN()
+        # self.net = ResNetBuilder.build_resnet18(num_output = 100)
+        self.logits = self.net(self.images)#, reuse = False)
+
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
             labels = self.labels, logits = self.logits))
 
@@ -36,59 +41,55 @@ class Trainer(object):
         self.accuracy = tf.reduce_mean(tf.reduce_sum(self.labels*self.preds, axis = 1))
         
         self.opt = tf.train.AdamOptimizer()\
-                           .minimize(self.loss, var_list = self.net.vars)
+                           .minimize(self.loss)#, var_list = self.net.vars)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
 
     def train(self,
-              sampler,
               num_epochs,
               batch_size):
 
-        num_batches = int(sampler.data_size/batch_size)
+        num_batches = int(len(self.x_train)/batch_size)
         print('epochs : {}, number of batches : {}'\
               .format(num_epochs, num_batches))
-
-        # imgs_val, labs_val = sampler.load_testset()
-        # num_valbatches = int(len(imgs_val)/batch_size)
 
         lap_times = []
         # training iteration
         for e in range(num_epochs):
+            permute_idx = np.random.permutation(np.arange(50000))
             lap_time = []
-            for batch in range(num_batches):
+            for b in range(num_batches):
 
-                if batch in np.linspace(0, num_batches, sampler.split+1, dtype = int):
-                    sampler.reload()
+                x_batch = self.x_train[permute_idx[b*batch_size:(b+1)*batch_size]]
+                y_batch = self.y_train[permute_idx[b*batch_size:(b+1)*batch_size]]
 
-                imgs, labs = sampler.sample(batch_size) # value [-1 - 1]
                 s_time = time.time()
                 self.sess.run(self.opt,
-                              feed_dict = {self.images:imgs, self.labels:labs})
+                              feed_dict = {self.images:x_batch, self.labels:y_batch})
                 e_time = time.time()
                 lap_time.append(e_time - s_time)
 
-                if batch%10 == 0:
+                if b%10 == 0:
                     acc = self.sess.run(self.accuracy,
-                                        feed_dict = {self.images:imgs,
-                                                     self.labels:labs})
-                    print('epoch : {}, batch : {}, accuracy : {}%'\
-                          .format(e, batch, acc))
+                                        feed_dict = {self.images:x_batch,
+                                                     self.labels:y_batch})
+                    print('epoch : {}, batch : {}, accuracy : {}'\
+                          .format(e, b, acc))
 
             # record single epoch training lap-time
             lap_times.append(np.mean(lap_time))
             
             # validation
-            for v_batch in range(num_valbatches):
-                val_accs = []
-                img_val = imgs_val[v_batch*batch_size:(v_batch+1)*batch_size]
-                lab_val = labs_val[v_batch*batch_size:(v_batch+1)*batch_size]
-                v_acc = self.sess.run(self.accuracy,
-                                      feed_dict = {self.images:img_val,
-                                                   self.labels:lab_val})
-                val_accs.append(v_acc)
-            print('{} epochs validation accuracy {}%'.format(e, np.mean(val_accs)))
+            accs_val = []
+            for b in range(int(len(self.x_test)/batch_size)):
+                x_val = self.x_test[b*batch_size:(b+1)*batch_size]
+                y_val = self.y_test[b*batch_size:(b+1)*batch_size]
+                acc_val = self.sess.run(self.accuracy,
+                                        feed_dict = {self.images:x_val,
+                                                     self.labels:y_val})
+                accs_val.append(acc_val)
+            print('{} epoch validation accuracy {}'.format(e, np.mean(accs_val)))
 
             # save trained model
             self.saver.save(self.sess, './model_tf/model{}.ckpt'.format(e))
@@ -99,22 +100,13 @@ class Trainer(object):
             for lap in lap_times:
                 f.write(',' + str(lap))
 
-def train_tf(epochs,
-             train_size, batch_size,
-             target_size, image_size,
-             metadir,
-             split):
-
-    sampler = Food101Sampler(metadir = metadir,
-                             target_size = target_size, image_size = image_size,
-                             split = split, num_utilize = train_size)
+def train_tf(epochs, batch_size):
 
     if not os.path.exists('./model_tf'):
         os.mkdir('./model_tf')
 
-    trainer = Trainer(image_size = image_size)
-    trainer.train(sampler = sampler,
-                  num_epochs = epochs,
+    trainer = Trainer()
+    trainer.train(num_epochs = epochs,
                   batch_size = batch_size)
 
 if __name__ == '__main__':
@@ -123,19 +115,8 @@ if __name__ == '__main__':
     # optimization
     parser.add_argument('-e', '--epochs', type = int, default = 20,
                         help = 'number of epochs [20]')
-    parser.add_argument('-t', '--train_size', type = int, default = np.inf,
-                        help  = 'size of utilizing data [np.inf(all)]')
     parser.add_argument('-b', '--batch_size', type = int, default = 64,
                         help = 'size of mini-batch [64]')
-    # data I/O
-    parser.add_argument('--target_size', type = int, default = 512,
-                        help = 'target cropping area for original images [512]')
-    parser.add_argument('--image_size', type = int, default = 128,
-                        help = 'size of dealing images [128]')
-    parser.add_argument('-m', '--metadir', type = str, required = True,
-                        help = '/path/to/food-101/mera contains food101 metadata')
-    parser.add_argument('-s', '--split', type = int, default = 5,
-                        help = 'load data, by [5] split')
     args = parser.parse_args()
 
     for key, value in vars(args).items():
