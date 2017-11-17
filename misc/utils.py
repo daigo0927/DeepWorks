@@ -5,7 +5,7 @@ import math
 import tensorflow as tf
 from scipy.misc import imread, imresize
 
-from keras.datasets import cifar10
+from keras.datasets import cifar10, cifar100
 from keras.utils.np_utils import to_categorical
 
 def leaky_relu(leak = 0.2):
@@ -28,6 +28,14 @@ def load_cifar10():
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
     y_train = to_categorical(y_train, num_classes = 10)
     y_test = to_categorical(y_test, num_classes = 10)
+
+    return (x_train/255., y_train), (x_test/255., y_test)
+
+def load_cifar100():
+    print('load cifar100 data ...')
+    (x_train, y_train), (x_test, y_test) = cifar100.load_data()
+    y_train = to_categorical(y_train, num_classes = 100)
+    y_test = to_categorical(y_test, num_classes = 100)
 
     return (x_train/255., y_train), (x_test/255., y_test)
 
