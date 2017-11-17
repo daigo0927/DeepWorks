@@ -5,11 +5,12 @@ import argparse
 import time
 
 import tensorflow as tf
+import tensorflow.contrib.layers as tcl
 
 import os, sys
 sys.path.append(os.pardir)
-# from ResNet_tf.model import ResNetBuilder
-# from Sonnet.train import build_simpleCNN
+from ResNet_tf.model import ResNetBuilder
+from Sonnet.train import build_simpleCNN
 from layers.blocks import bn_relu_conv
 from misc.utils import load_cifar10, load_cifar100
 
@@ -22,36 +23,62 @@ class CNN(object):
 
     def __call__(self, inputs, reuse = True):
         with tf.variable_scope(self.name) as vs:
-            tf.get_variable_scope()
+            # tf.get_variable_scope()
             if reuse:
                 vs.reuse_variables()
+
+            x = tcl.conv2d(inputs,
+                           num_outputs = 64,
+                           kernel_size = (4, 4),
+                           stride = (1, 1),
+                           padding = 'SAME')
+            x = tcl.batch_norm(x)
+            x = tf.nn.relu(x)
+            x = tcl.max_pool2d(x, (2, 2), (2, 2), 'SAME')
+            x = tcl.conv2d(x,
+                           num_outputs = 128,
+                           kernel_size = (4, 4),
+                           stride = (1, 1),
+                           padding = 'SAME')
+            x = tcl.batch_norm(x)
+            x = tf.nn.relu(x)
+            x = tcl.max_pool2d(x, (2, 2), (2, 2), 'SAME')
+            x = tcl.flatten(x)
+            logits = tcl.fully_connected(x, num_outputs = self.num_output)
+
+            return logits
+
+    @property
+    def vars(self):
+        return [var for var in tf.global_variables() if self.name in var.name]
 
 class Trainer(object):
 
     def __init__(self):
 
         self.sess = tf.Session()
-        self._load_cifar100()
+        self._load_cifar10()
         self._build_graph()
 
-    def _load_cifar100(self):
-        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar100()
+    def _load_cifar10(self):
+        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_cifar10()
 
     def _build_graph(self):
 
         self.images = tf.placeholder(tf.float32,
                                      shape = (None, 32, 32, 3), name = 'images')
         self.labels = tf.placeholder(tf.float32,
-                                     shape = (None, 100), name = 'labels')
+                                     shape = (None, 10), name = 'labels')
 
-        # self.net = build_simpleCNN()
+        self.net = build_simpleCNN()
         # self.logits = self.net(self.images)
         # self.net = ResNetBuilder.build_resnet18(num_output = 100)
         # self.net = ResNetBuilder.build_resnet18(num_output = 10)
-        self.net = ResNetBuilder.build(num_output = 100,
-                                       block_fn = 'plain',
-                                       repetitions = [2, 0, 0, 0])
-        self.logits = self.net(self.images, reuse = False)
+        # self.net = ResNetBuilder.build(num_output = 10,
+        #                                block_fn = 'plain',
+        #                                repetitions = [2, 0, 0, 0])
+        # self.net = CNN(num_output = 10)
+        self.logits = self.net(self.images)#, reuse = False)
 
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
             labels = self.labels, logits = self.logits))
@@ -60,7 +87,7 @@ class Trainer(object):
         self.accuracy = tf.reduce_mean(tf.reduce_sum(self.labels*self.preds, axis = 1))
         
         self.opt = tf.train.AdamOptimizer()\
-                           .minimize(self.loss)#, var_list = self.net.vars)
+                           .minimize(self.loss)# , var_list = self.net.vars)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
