@@ -23,19 +23,19 @@ def tf_image_label_concat(image, label,
     
     return image_label # shape(None, width, width, channel+feature)
 
-def load_cifar10(to_categorical = True):
+def load_cifar10(to_categoric = True):
     print('load cifar10 data ...')
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    if to_categorical:
+    if to_categoric:
         y_train = to_categorical(y_train, num_classes = 10)
         y_test = to_categorical(y_test, num_classes = 10)
 
     return (x_train/255., y_train), (x_test/255., y_test)
 
-def load_cifar100(to_categorical = True):
+def load_cifar100(to_categoric = True):
     print('load cifar100 data ...')
     (x_train, y_train), (x_test, y_test) = cifar100.load_data()
-    if to_categorical:
+    if to_categoric:
         y_train = to_categorical(y_train, num_classes = 100)
         y_test = to_categorical(y_test, num_classes = 100)
 
