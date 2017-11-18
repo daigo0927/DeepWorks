@@ -107,8 +107,8 @@ class ResNet(object):
                                      kernel_size = (h, w),
                                      stride = (1, 1))
             outputs = tcl.flatten(outputs)
-            logits = tcl.fully_connected(outputs, num_outputs = self.num_output)
-
+            logits = tcl.fully_connected(outputs, num_outputs = self.num_output,
+                                         activation_fn = None)
             return logits
 
     @property
