@@ -90,7 +90,6 @@ class Trainer(object):
         self.accuracy = tf.reduce_mean(tf.reduce_sum(self.labels*self.preds, axis = 1))
         
         self.opt = tf.train.AdamOptimizer()\
-
                            .minimize(self.loss)# , var_list = self.net.vars)
 
         self.saver = tf.train.Saver()
@@ -128,7 +127,7 @@ class Trainer(object):
                           .format(e, b, acc))
 
             # record single epoch training lap-time
-            lap_times.append(np.mean(lap_time))
+            lap_times.append(np.sum(lap_time))
             
             # validation
             accs_val = []
