@@ -150,15 +150,17 @@ class Trainer(object):
                 f.write(',' + str(lap))
             f.write('\n')
 
-def train_tf(epochs, batch_size):
+def train_tf(epochs, batch_size, gpu_id):
 
     if not os.path.exists('./model_tf'):
         os.mkdir('./model_tf')
 
+    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+
     trainer = Trainer()
     trainer.train(num_epochs = epochs,
                   batch_size = batch_size)
-
+                  
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -167,6 +169,8 @@ if __name__ == '__main__':
                         help = 'number of epochs [20]')
     parser.add_argument('-b', '--batch_size', type = int, default = 64,
                         help = 'size of mini-batch [64]')
+    parser.add_argument('-g', '--gpu_id', type = str, required = True,
+                        help = 'utilize gpu number')
     args = parser.parse_args()
 
     for key, value in vars(args).items():
